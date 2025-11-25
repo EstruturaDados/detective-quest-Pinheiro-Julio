@@ -1,47 +1,114 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-// Desafio Detective Quest
-// Tema 4 - Árvores e Tabela Hash
-// Este código inicial serve como base para o desenvolvimento das estruturas de navegação, pistas e suspeitos.
-// Use as instruções de cada região para desenvolver o sistema completo com árvore binária, árvore de busca e tabela hash.
+typedef struct No {
+    char nome[50];
+    struct No* esquerda;
+    struct No* direita;
+    struct No* pai;
+} No;
 
-int main() {
-
-    // 🌱 Nível Novato: Mapa da Mansão com Árvore Binária
-    //
-    // - Crie uma struct Sala com nome, e dois ponteiros: esquerda e direita.
-    // - Use funções como criarSala(), conectarSalas() e explorarSalas().
-    // - A árvore pode ser fixa: Hall de Entrada, Biblioteca, Cozinha, Sótão etc.
-    // - O jogador deve poder explorar indo à esquerda (e) ou à direita (d).
-    // - Finalize a exploração com uma opção de saída (s).
-    // - Exiba o nome da sala a cada movimento.
-    // - Use recursão ou laços para caminhar pela árvore.
-    // - Nenhuma inserção dinâmica é necessária neste nível.
-
-    // 🔍 Nível Aventureiro: Armazenamento de Pistas com Árvore de Busca
-    //
-    // - Crie uma struct Pista com campo texto (string).
-    // - Crie uma árvore binária de busca (BST) para inserir as pistas coletadas.
-    // - Ao visitar salas específicas, adicione pistas automaticamente com inserirBST().
-    // - Implemente uma função para exibir as pistas em ordem alfabética (emOrdem()).
-    // - Utilize alocação dinâmica e comparação de strings (strcmp) para organizar.
-    // - Não precisa remover ou balancear a árvore.
-    // - Use funções para modularizar: inserirPista(), listarPistas().
-    // - A árvore de pistas deve ser exibida quando o jogador quiser revisar evidências.
-
-    // 🧠 Nível Mestre: Relacionamento de Pistas com Suspeitos via Hash
-    //
-    // - Crie uma struct Suspeito contendo nome e lista de pistas associadas.
-    // - Crie uma tabela hash (ex: array de ponteiros para listas encadeadas).
-    // - A chave pode ser o nome do suspeito ou derivada das pistas.
-    // - Implemente uma função inserirHash(pista, suspeito) para registrar relações.
-    // - Crie uma função para mostrar todos os suspeitos e suas respectivas pistas.
-    // - Adicione um contador para saber qual suspeito foi mais citado.
-    // - Exiba ao final o “suspeito mais provável” baseado nas pistas coletadas.
-    // - Para hashing simples, pode usar soma dos valores ASCII do nome ou primeira letra.
-    // - Em caso de colisão, use lista encadeada para tratar.
-    // - Modularize com funções como inicializarHash(), buscarSuspeito(), listarAssociacoes().
-
-    return 0;
+No* criarNo(const char* nome, No* pai) {
+    No* novo = (No*)malloc(sizeof(No));
+    if (novo == NULL) {
+        printf("Erro ao alocar memória.\n");
+        exit(1);
+    }
+    strncpy(novo->nome, nome, sizeof(novo->nome)-1);
+    novo->nome[sizeof(novo->nome)-1] = '\0';
+    novo->esquerda = NULL;
+    novo->direita = NULL;
+    novo->pai = pai;
+    return novo;
 }
 
+void liberar(No* raiz) {
+    if (raiz == NULL) return;
+    liberar(raiz->esquerda);
+    liberar(raiz->direita);
+    free(raiz);
+}
+
+// Constroi uma árvore de exemplo representando cômodos da casa
+No* construirCasaExemplo() {
+    No* hall = criarNo("Hall de Entrada", NULL);
+
+    hall->esquerda = criarNo("Sala de Estar", hall);
+    hall->direita  = criarNo("Cozinha", hall);
+
+    hall->esquerda->esquerda = criarNo("Biblioteca", hall->esquerda);
+    hall->esquerda->direita  = criarNo("Quarto", hall->esquerda);
+
+    hall->direita->esquerda = criarNo("Área de Serviço", hall->direita);
+    hall->direita->direita  = criarNo("Despensa", hall->direita); // nó folha
+
+    // Torna "Biblioteca" um nó folha (sem saídas)
+    // Torna "Quarto" um nó folha
+    // Área de Serviço pode ter saída para um pequeno "Jardim" — aqui não adicionamos para manter alguns nós folhas
+
+    return hall;
+}
+
+int ehFolha(No* n) {
+    return n != NULL && n->esquerda == NULL && n->direita == NULL;
+}
+
+void navegarCasa(No* raiz) {
+    No* atual = raiz;
+    char entrada[100];
+
+    while (1) {
+        printf("\nVocê está em: %s\n", atual->nome);
+
+        if (ehFolha(atual)) {
+            printf("--> Este cômodo não tem saída. Fim da navegação.\n");
+            break;
+        }
+
+        printf("Opções:\n");
+        int opt = 0;
+        int temEsq = atual->esquerda != NULL;
+        int temDir = atual->direita != NULL;
+        int temPai = atual->pai != NULL;
+
+        if (temEsq) printf("  1 - Ir para: %s\n", atual->esquerda->nome);
+        if (temDir) printf("  2 - Ir para: %s\n", atual->direita->nome);
+        if (temPai) printf("  3 - Voltar para: %s\n", atual->pai->nome);
+        printf("  0 - Sair\n");
+
+        printf("Escolha uma opção: ");
+        if (!fgets(entrada, sizeof(entrada), stdin)) break;
+        if (sscanf(entrada, "%d", &opt) != 1) {
+            printf("Entrada inválida. Tente novamente.\n");
+            continue;
+        }
+
+        if (opt == 0) {
+            printf("Saindo da navegação.\n");
+            break;
+        }
+
+        if (opt == 1 && temEsq) {
+            atual = atual->esquerda;
+        } else if (opt == 2 && temDir) {
+            atual = atual->direita;
+        } else if (opt == 3 && temPai) {
+            atual = atual->pai;
+        } else {
+            printf("Opção inválida para o cômodo atual. Tente novamente.\n");
+        }
+    }
+}
+
+int main() {
+    No* casa = construirCasaExemplo();
+
+    printf("Navegação interativa pela casa (árvore binária).\n");
+    printf("Navegue até encontrar um cômodo sem saída (nó folha).\n");
+
+    navegarCasa(casa);
+
+    liberar(casa);
+    return 0;
+}
